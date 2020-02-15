@@ -17,7 +17,7 @@ fn main() {
     let kr = unsafe { IOServiceGetMatchingServices(
         kIOMasterPortDefault,
         classes_to_match,
-        &mut iter as *mut _ as *mut _
+        iter.as_mut_ptr()
     ) };
     dbg!(kr);
     if kr != mach::kern_return::KERN_SUCCESS {
@@ -46,31 +46,32 @@ fn main() {
         let name = unsafe { CStr::from_ptr(name.as_ptr()) };
         dbg!(name);
 
-        let mut plugin_interface: *mut *mut IOCFPlugInInterface 
-            = unsafe { MaybeUninit::uninit().assume_init() };
-        let mut score = unsafe { MaybeUninit::uninit().assume_init() };
+        let mut plugin_interface = MaybeUninit::uninit();
+        let mut score = MaybeUninit::uninit();
         let kr = unsafe { IOCreatePlugInInterfaceForService(
             next,
             kIOUSBDeviceUserClientTypeID(),
             kIOCFPlugInInterfaceID(),
-            &mut plugin_interface as *mut _,
-            &mut score as *mut _,
+            plugin_interface.as_mut_ptr(),
+            score.as_mut_ptr(),
         ) };
         if kr != mach::kern_return::KERN_SUCCESS {
             println!("IOCreatePlugInInterfaceForService not success! {}", kr);
             unsafe { IOObjectRelease(next) };
             continue;
         } 
+        dbg!(unsafe { score.assume_init() });
 
-        let mut device = unsafe { MaybeUninit::uninit().assume_init() };
+        let plugin_interface = unsafe { plugin_interface.assume_init() };
+        let mut device = MaybeUninit::uninit();
         unsafe { 
             ((**plugin_interface).QueryInterface)(
                 plugin_interface, 
                 CFUUIDGetUUIDBytes(kIOUSBInterfaceInterfaceID942()), 
-                &mut device as *mut _ as *mut _
+                device.as_mut_ptr()
             );
         }
-        dbg!(device);
+        dbg!(unsafe { device.assume_init() });
         unsafe {
             ((**plugin_interface).Release)(plugin_interface)
         };
