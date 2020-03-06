@@ -1,3 +1,4 @@
+// #![allow(unused)]
 use libc::{c_char, c_void};
 use mach::kern_return;
 use core_foundation::{
@@ -26,6 +27,9 @@ extern "C" {
         interface_type: CFUUIDRef,
         the_interface: *mut *mut *mut IOCFPlugInInterface,
         the_score: *mut i32,
+    ) -> kern_return::kern_return_t;
+    pub fn IODestroyPlugInInterface(
+        interface: *mut *mut IOCFPlugInInterface,
     ) -> kern_return::kern_return_t;
     pub fn CFUUIDGetConstantUUIDWithBytes(
         alloc: CFAllocatorRef,
@@ -90,6 +94,7 @@ pub type LPVOID = *const c_void;
 pub type HRESULT = SInt32;
 pub type ULONG = UInt32;
 pub type IOReturn = kern_return::kern_return_t;
+pub type USBDeviceAddress = UInt16;
 
 #[repr(C)]
 #[allow(non_snake_case)]
