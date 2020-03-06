@@ -59,6 +59,18 @@ fn my_get_usb_interface(iter: io_iterator_t) {
         } 
         dbg!(unsafe { score.assume_init() });
 
+        let mut name = vec![0i8; 1024];
+        let kr = unsafe { IORegistryEntryGetName(
+            service, 
+            name.as_mut_ptr()
+        ) };
+        if kr != mach::kern_return::KERN_SUCCESS {
+            println!("IORegistryEntryGetName not success!");
+            continue;
+        }
+        let name = unsafe { CStr::from_ptr(name.as_ptr()) };
+        dbg!(name);
+
         //Now create the device interface
         let plugin_interface = unsafe { plugin_interface.assume_init() };
         let mut device = MaybeUninit::uninit();
@@ -90,18 +102,3 @@ fn my_get_usb_interface(iter: io_iterator_t) {
         };
     }
 }
-
-/*
-
-        let mut name = vec![0i8; 1024];
-        let kr = unsafe { IORegistryEntryGetName(
-            service, 
-            name.as_mut_ptr()
-        ) };
-        if kr != mach::kern_return::KERN_SUCCESS {
-            println!("IORegistryEntryGetName not success!");
-            continue;
-        }
-        let name = unsafe { CStr::from_ptr(name.as_ptr()) };
-        dbg!(name);
-*/

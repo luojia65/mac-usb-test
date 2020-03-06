@@ -1,4 +1,4 @@
-// #![allow(unused)]
+#![allow(unused)]
 use libc::{c_char, c_void};
 use mach::kern_return;
 use core_foundation::{
@@ -123,4 +123,21 @@ pub struct IOCFPlugInInterface {
         service: io_service_t
     ) -> IOReturn,
     pub Stop: extern "C" fn(this: *mut Self) -> IOReturn,
+}
+
+#[repr(C)]
+#[allow(non_snake_case)]
+pub struct IOUSBDeviceStruct942
+{
+    // IUNKNOWN_C_GUTS
+    pub _reserved: *const Self,
+    pub QueryInterface: extern "C" fn(
+        this: *mut *mut Self, // todo: verify
+        iid: REFIID, 
+        ppv: *mut LPVOID
+    ) -> HRESULT,
+    pub AddRef: extern "C" fn(this: *mut Self) -> ULONG,
+    pub Release: extern "C" fn(this: *mut *mut Self) -> ULONG,
+    // IOUSBDeviceStruct942
+
 }
