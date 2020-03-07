@@ -221,7 +221,7 @@ pub struct IOCFPlugInInterface {
     // IUNKNOWN_C_GUTS
     pub _reserved: *const c_void,
     pub QueryInterface: extern "C" fn(this: *mut *mut Self, iid: REFIID, ppv: *mut LPVOID) -> HRESULT,
-    pub AddRef: extern "C" fn(this: *mut Self) -> ULONG,
+    pub AddRef: extern "C" fn(this: *mut *mut Self) -> ULONG,
     pub Release: extern "C" fn(this: *mut *mut Self) -> ULONG,
     // IOCFPLUGINBASE
     pub version: UInt16,
@@ -246,7 +246,7 @@ pub struct IOUSBDeviceInterface942 {
     // IUNKNOWN_C_GUTS
     pub _reserved: *const c_void,
     pub QueryInterface: extern "C" fn(this: *mut *mut Self, iid: REFIID, ppv: *mut LPVOID) -> HRESULT,
-    pub AddRef: extern "C" fn(this: *mut Self) -> ULONG,
+    pub AddRef: extern "C" fn(this: *mut *mut Self) -> ULONG,
     pub Release: extern "C" fn(this: *mut *mut Self) -> ULONG,
     // todo
 }
@@ -257,7 +257,7 @@ pub struct IOUSBDeviceStruct942 {
     // IUNKNOWN_C_GUTS
     pub _reserved: *const c_void,
     pub QueryInterface: extern "C" fn(this: *mut *mut Self, iid: REFIID, ppv: *mut LPVOID) -> HRESULT,
-    pub AddRef: extern "C" fn(this: *mut Self) -> ULONG,
+    pub AddRef: extern "C" fn(this: *mut *mut Self) -> ULONG,
     pub Release: extern "C" fn(this: *mut *mut Self) -> ULONG,
     // IOUSBDeviceStruct942
     pub CreateDeviceAsyncEventSource:

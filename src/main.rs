@@ -86,7 +86,7 @@ fn my_get_usb_interface(iter: io_iterator_t) {
         }
         dbg!(unsafe { device_interface.assume_init() });
         let device_interface = unsafe { device_interface.assume_init() };
-
+        
         // get address
         // let usb_device_address = MaybeUninit::uninit();
         // unsafe {
