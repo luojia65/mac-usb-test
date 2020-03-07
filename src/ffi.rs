@@ -70,6 +70,10 @@ pub fn kIOUSBDeviceClassName() -> *const c_char {
     b"IOUSBDevice\0".as_ptr() as *const c_char
 }
 #[allow(non_snake_case)]
+pub fn kIOUSBInterfaceClassName() -> *const c_char {
+    b"IOUSBInterface\0".as_ptr() as *const c_char
+}
+#[allow(non_snake_case)]
 pub fn kIOUSBHostDeviceClassName() -> *const c_char {
     b"IOUSBHostDevice\0".as_ptr() as *const c_char
 }
