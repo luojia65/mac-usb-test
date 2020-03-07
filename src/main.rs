@@ -63,7 +63,7 @@ fn my_get_usb_interface(iter: io_iterator_t) {
         // Don't need the device object after intermediate plug-in is created
         unsafe { IOObjectRelease(service) };
         if kr != mach::kern_return::KERN_SUCCESS {
-            println!("IOCreatePlugInInterfaceForService not success! {}", kr);
+            println!("IOCreatePlugInInterfaceForService not success! 0x{:08X}", kr);
             unsafe { IOObjectRelease(service) };
             continue;
         }
@@ -82,7 +82,7 @@ fn my_get_usb_interface(iter: io_iterator_t) {
         //Don't need the device object after intermediate plug-in is created
         unsafe { IODestroyPlugInInterface(plugin_interface) };
         if kr != mach::kern_return::KERN_SUCCESS {
-            println!("QueryInterface not success! {}", kr);
+            println!("QueryInterface not success! 0x{:08X}", kr);
             continue;
         }
         let device_interface = unsafe { device_interface.assume_init() };
@@ -94,7 +94,7 @@ fn my_get_usb_interface(iter: io_iterator_t) {
             )
         };
         if kr != mach::kern_return::KERN_SUCCESS {
-            println!("GetLocationID not success! {}", kr);
+            println!("GetLocationID not success! 0x{:08X}", kr);
             continue;
         }
         let location_id = unsafe { location_id.assume_init() };
@@ -105,7 +105,7 @@ fn my_get_usb_interface(iter: io_iterator_t) {
             ((**device_interface).GetDeviceAddress)(device_interface, usb_device_address.as_mut_ptr())
         };
         if kr != mach::kern_return::KERN_SUCCESS {
-            println!("GetDeviceAddress not success! {}", kr);
+            println!("GetDeviceAddress not success! 0x{:08X}", kr);
             continue;
         }
         let usb_device_address = unsafe { usb_device_address.assume_init() };
@@ -120,7 +120,7 @@ fn process_usb_device(device_interface: *mut *mut IOUSBDeviceInterface942) {
     if kr != mach::kern_return::KERN_SUCCESS {
         let kr2 = unsafe { ((**device_interface).USBDeviceClose)(device_interface) };
         unsafe { ((**device_interface).Release)(device_interface) };
-        println!("USBDeviceOpen not success! {} => {}", kr, kr2);
+        println!("USBDeviceOpen not success! 0x{:08X} => 0x{:08X}", kr, kr2);
         return;
     }
 
@@ -130,12 +130,12 @@ fn process_usb_device(device_interface: *mut *mut IOUSBDeviceInterface942) {
         num_config.as_mut_ptr()
     ) };
     if kr != mach::kern_return::KERN_SUCCESS {
-        println!("GetNumberOfConfigurations not success! {}", kr);
+        println!("GetNumberOfConfigurations not success! 0x{:08X}", kr);
         return;
     }
     let num_config = unsafe { num_config.assume_init() };
     dbg!(num_config);
-    
+
     unsafe { ((**device_interface).USBDeviceClose)(device_interface) };
     unsafe { ((**device_interface).Release)(device_interface) };
 }
