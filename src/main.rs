@@ -38,7 +38,7 @@ fn my_get_usb_interface(iter: io_iterator_t) {
         }
         dbg!(service);
 
-        //Create an intermediate plug-in
+        // Create an intermediate plug-in
         let mut plugin_interface = MaybeUninit::uninit();
         let mut score = MaybeUninit::uninit();
         let kr = unsafe {
@@ -59,6 +59,7 @@ fn my_get_usb_interface(iter: io_iterator_t) {
         }
         dbg!(unsafe { score.assume_init() });
 
+        // 
         let mut name = [0i8; 128];
         let kr = unsafe { IORegistryEntryGetName(service, name.as_mut_ptr()) };
         if kr != mach::kern_return::KERN_SUCCESS {
@@ -68,14 +69,14 @@ fn my_get_usb_interface(iter: io_iterator_t) {
         let name = unsafe { CStr::from_ptr(name.as_ptr()) };
         dbg!(name);
 
-        //Now create the device interface
+        // Now create the device interface
         let plugin_interface = unsafe { plugin_interface.assume_init() };
-        let mut device_interface = MaybeUninit::uninit();
+        let mut device_interface = MaybeUninit::<*mut *mut IOUSBDeviceInterface942>::uninit();
         let kr = unsafe {
             ((**plugin_interface).QueryInterface)(
                 plugin_interface,
                 CFUUIDGetUUIDBytes(kIOUSBDeviceInterfaceID942()),
-                device_interface.as_mut_ptr(),
+                device_interface.as_mut_ptr().cast(),
             )
         };
         //Don't need the device object after intermediate plug-in is created
@@ -84,14 +85,32 @@ fn my_get_usb_interface(iter: io_iterator_t) {
             println!("QueryInterface not success! {}", kr);
             continue;
         }
-        dbg!(unsafe { device_interface.assume_init() });
         let device_interface = unsafe { device_interface.assume_init() };
-        
-        // get address
-        // let usb_device_address = MaybeUninit::uninit();
-        // unsafe {
-        //     (**device).GetDeviceAddress(device, usb_device_address.as_mut_ptr());
-        // }
+        let mut location_id = MaybeUninit::uninit();
+        let kr = unsafe {
+            ((**device_interface).GetLocationID)(
+                device_interface,
+                location_id.as_mut_ptr()
+            )
+        };
+        if kr != mach::kern_return::KERN_SUCCESS {
+            println!("GetLocationID not success! {}", kr);
+            continue;
+        }
+        let location_id = unsafe { location_id.assume_init() };
+        dbg!(location_id);
+
+        let mut usb_device_address = MaybeUninit::uninit();
+        let kr = unsafe {
+            ((**device_interface).GetDeviceAddress)(device_interface, usb_device_address.as_mut_ptr())
+        };
+        if kr != mach::kern_return::KERN_SUCCESS {
+            println!("GetDeviceAddress not success! {}", kr);
+            continue;
+        }
+        let usb_device_address = unsafe { usb_device_address.assume_init() };
+        dbg!(usb_device_address);
+
 
         unsafe { ((**plugin_interface).Release)(plugin_interface) };
     }
