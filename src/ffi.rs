@@ -2,10 +2,12 @@
 use core::ptr;
 use core_foundation::{
     base::CFAllocatorRef,
+    dictionary::{CFDictionaryRef, CFMutableDictionaryRef},
+    runloop::CFRunLoopSourceRef,
     uuid::{CFUUIDBytes, CFUUIDRef},
 };
 use libc::{c_char, c_void};
-use mach::kern_return;
+use mach::{kern_return::kern_return_t, port::mach_port_t};
 
 extern "C" {
     pub static kIOMasterPortDefault: mach_port_t;
@@ -14,23 +16,23 @@ extern "C" {
         master_port: mach_port_t,
         matching: CFDictionaryRef,
         existing: *mut io_iterator_t,
-    ) -> kern_return::kern_return_t;
+    ) -> kern_return_t;
     pub fn IOIteratorNext(iterator: io_iterator_t) -> io_object_t;
-    pub fn IOObjectRelease(object: io_object_t) -> kern_return::kern_return_t;
+    pub fn IOObjectRelease(object: io_object_t) -> kern_return_t;
     pub fn IORegistryEntryGetName(
         entry: io_registry_entry_t,
         name: io_name_t,
-    ) -> kern_return::kern_return_t;
+    ) -> kern_return_t;
     pub fn IOCreatePlugInInterfaceForService(
         service: io_service_t,
         plugin_type: CFUUIDRef,
         interface_type: CFUUIDRef,
         the_interface: *mut *mut *mut IOCFPlugInInterface,
         the_score: *mut i32,
-    ) -> kern_return::kern_return_t;
+    ) -> kern_return_t;
     pub fn IODestroyPlugInInterface(
         interface: *mut *mut IOCFPlugInInterface,
-    ) -> kern_return::kern_return_t;
+    ) -> kern_return_t;
     pub fn CFUUIDGetConstantUUIDWithBytes(
         alloc: CFAllocatorRef,
         byte0: UInt8,
@@ -52,8 +54,6 @@ extern "C" {
     ) -> CFUUIDRef;
 }
 
-#[allow(non_camel_case_types)]
-pub type mach_port_t = u32;
 #[allow(non_camel_case_types)]
 pub type io_object_t = mach_port_t;
 #[allow(non_camel_case_types)]
@@ -111,18 +111,6 @@ pub fn kIOUSBDeviceInterfaceID942() -> CFUUIDRef {
     ) }
 } 
 
-#[repr(C)]
-pub struct __CFDictionary {
-    __private: c_void,
-}
-#[repr(C)]
-pub struct __CFRunLoopSource {
-    __private: c_void,
-}
-pub type CFMutableDictionaryRef = *mut __CFDictionary;
-pub type CFDictionaryRef = *const __CFDictionary;
-pub type CFRunLoopSourceRef = *mut __CFRunLoopSource;
-
 pub type UInt8 = u8;
 pub type UInt16 = u16;
 pub type UInt32 = u32;
@@ -133,7 +121,7 @@ pub type REFIID = CFUUIDBytes;
 pub type LPVOID = *const c_void;
 pub type HRESULT = SInt32;
 pub type ULONG = UInt32;
-pub type IOReturn = kern_return::kern_return_t;
+pub type IOReturn = kern_return_t;
 pub type USBDeviceAddress = UInt16;
 pub type AbsoluteTime = UInt64;
 

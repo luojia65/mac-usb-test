@@ -46,7 +46,7 @@ fn my_get_usb_interface(iter: io_iterator_t) {
             continue;
         }
         let name = unsafe { CStr::from_ptr(name.as_ptr()) };
-        dbg!(name);
+        dbg!(name.to_str().unwrap());
 
         // Create an intermediate plug-in
         let mut plugin_interface = MaybeUninit::uninit();
