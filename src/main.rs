@@ -111,7 +111,31 @@ fn my_get_usb_interface(iter: io_iterator_t) {
         let usb_device_address = unsafe { usb_device_address.assume_init() };
         dbg!(usb_device_address);
 
-
-        unsafe { ((**plugin_interface).Release)(plugin_interface) };
+        process_usb_device(device_interface);
     }
+}
+
+fn process_usb_device(device_interface: *mut *mut IOUSBDeviceInterface942) {
+    let kr = unsafe { ((**device_interface).USBDeviceOpen)(device_interface) };
+    if kr != mach::kern_return::KERN_SUCCESS {
+        let kr2 = unsafe { ((**device_interface).USBDeviceClose)(device_interface) };
+        unsafe { ((**device_interface).Release)(device_interface) };
+        println!("USBDeviceOpen not success! {} => {}", kr, kr2);
+        return;
+    }
+
+    let mut num_config = MaybeUninit::uninit();
+    let kr = unsafe { ((**device_interface).GetNumberOfConfigurations)(
+        device_interface,
+        num_config.as_mut_ptr()
+    ) };
+    if kr != mach::kern_return::KERN_SUCCESS {
+        println!("GetNumberOfConfigurations not success! {}", kr);
+        return;
+    }
+    let num_config = unsafe { num_config.assume_init() };
+    dbg!(num_config);
+    
+    unsafe { ((**device_interface).USBDeviceClose)(device_interface) };
+    unsafe { ((**device_interface).Release)(device_interface) };
 }
