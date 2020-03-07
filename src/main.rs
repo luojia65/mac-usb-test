@@ -118,9 +118,9 @@ fn my_get_usb_interface(iter: io_iterator_t) {
 fn process_usb_device(device_interface: *mut *mut IOUSBDeviceInterface942) {
     let kr = unsafe { ((**device_interface).USBDeviceOpen)(device_interface) };
     if kr != mach::kern_return::KERN_SUCCESS {
-        let kr2 = unsafe { ((**device_interface).USBDeviceClose)(device_interface) };
-        unsafe { ((**device_interface).Release)(device_interface) };
-        println!("USBDeviceOpen not success! 0x{:08X} => 0x{:08X}", kr, kr2);
+        // no USBDeviceClose here; will return 0x2c5 error for device not open
+        let kr3 = unsafe { ((**device_interface).Release)(device_interface) };
+        println!("USBDeviceOpen not success! 0x{:08X} => 0x{:08X}", kr, kr3);
         return;
     }
 
