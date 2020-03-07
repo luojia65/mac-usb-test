@@ -6,7 +6,7 @@ use ffi::*;
 use std::ffi::CStr;
 
 fn main() {
-    let matching_dict = unsafe { IOServiceMatching(kIOUSBDeviceClassName()) };
+    let matching_dict = unsafe { IOServiceMatching(kIOUSBHostDeviceClassName()) };
     dbg!(matching_dict);
     if matching_dict == core::ptr::null_mut() {
         println!("IOServiceMatching returned NULL.");

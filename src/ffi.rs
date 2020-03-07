@@ -70,6 +70,14 @@ pub fn kIOUSBDeviceClassName() -> *const c_char {
     b"IOUSBDevice\0".as_ptr() as *const c_char
 }
 #[allow(non_snake_case)]
+pub fn kIOUSBHostDeviceClassName() -> *const c_char {
+    b"IOUSBHostDevice\0".as_ptr() as *const c_char
+}
+#[allow(non_snake_case)]
+pub fn kIOUSBHostInterfaceClassName() -> *const c_char {
+    b"IOUSBHostInterface\0".as_ptr() as *const c_char
+}
+#[allow(non_snake_case)]
 pub fn kIOUSBDeviceUserClientTypeID() -> CFUUIDRef {
     unsafe { CFUUIDGetConstantUUIDWithBytes(ptr::null(),
         0x9d, 0xc7, 0xb7, 0x80, 0x9e, 0xc0, 0x11, 0xD4,
