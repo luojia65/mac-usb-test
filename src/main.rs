@@ -38,6 +38,16 @@ fn my_get_usb_interface(iter: io_iterator_t) {
         }
         dbg!(service);
 
+        // 
+        let mut name = Box::new([0i8; 128]);
+        let kr = unsafe { IORegistryEntryGetName(service, name.as_mut_ptr()) };
+        if kr != mach::kern_return::KERN_SUCCESS {
+            println!("IORegistryEntryGetName not success!");
+            continue;
+        }
+        let name = unsafe { CStr::from_ptr(name.as_ptr()) };
+        dbg!(name);
+
         // Create an intermediate plug-in
         let mut plugin_interface = MaybeUninit::uninit();
         let mut score = MaybeUninit::uninit();
@@ -58,16 +68,6 @@ fn my_get_usb_interface(iter: io_iterator_t) {
             continue;
         }
         dbg!(unsafe { score.assume_init() });
-
-        // 
-        let mut name = [0i8; 128];
-        let kr = unsafe { IORegistryEntryGetName(service, name.as_mut_ptr()) };
-        if kr != mach::kern_return::KERN_SUCCESS {
-            println!("IORegistryEntryGetName not success!");
-            continue;
-        }
-        let name = unsafe { CStr::from_ptr(name.as_ptr()) };
-        dbg!(name);
 
         // Now create the device interface
         let plugin_interface = unsafe { plugin_interface.assume_init() };
