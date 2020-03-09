@@ -1,18 +1,13 @@
-mod ffi;
-
 use core::mem::MaybeUninit;
 use core_foundation::uuid::CFUUIDGetUUIDBytes;
 use core_foundation::runloop::*;
-// use core_foundation::dictionary::*;
+use core_foundation::dictionary::*;
 use ffi::*;
 use std::ffi::CStr;
 use core::ffi::c_void;
 
 fn main() {
-    iterate_usb();
-}
-
-fn iterate_usb() {
+    
     let notify_port = unsafe { IONotificationPortCreate(kIOMasterPortDefault) };
     dbg!(notify_port);
     let run_loop_src = unsafe { IONotificationPortGetRunLoopSource(notify_port) };
@@ -30,6 +25,8 @@ fn iterate_usb() {
         return;
     }
 
+    iterate_usb(matching_dict);
+
     let mut added_iter = MaybeUninit::uninit();
     let kr = unsafe { IOServiceAddMatchingNotification(
         notify_port,
@@ -39,28 +36,39 @@ fn iterate_usb() {
         core::ptr::null(),
         added_iter.as_mut_ptr(),
     ) };
-    let added_iter = unsafe { added_iter.assume_init() };
     if kr != mach::kern_return::KERN_SUCCESS {
         println!("IOServiceAddMatchingNotification not success!");
         return;
     }
 
-    my_get_usb_interface(added_iter);
-
     unsafe { CFRunLoopRun() };
-
-    unsafe { IOObjectRelease(added_iter) };
+    std::thread::park();
 }
 
 extern "C" fn my_notify_callback(
     ref_con: *const c_void, 
     iterator: io_iterator_t
 ) {
-    println!("New device detected! Ref: {:p} Iter: 0x{:08x}", ref_con, iterator);
-    my_get_usb_interface(iterator);
-    // do not release iterator here
+    println!("todo! {:p} 0x{:08x}", ref_con, iterator);
 }
 
+fn iterate_usb(matching_dict: CFMutableDictionaryRef) {
+    let mut iter: MaybeUninit<io_iterator_t> = MaybeUninit::uninit();
+    let kr = unsafe {
+        IOServiceGetMatchingServices(kIOMasterPortDefault, matching_dict, iter.as_mut_ptr())
+    };
+    dbg!(kr);
+    if kr != mach::kern_return::KERN_SUCCESS {
+        println!("IOServiceGetMatchingServices not success!");
+        return;
+    }
+    let iter = unsafe { iter.assume_init() };
+    dbg!(iter);
+
+    my_get_usb_interface(iter);
+
+    unsafe { IOObjectRelease(iter) };
+}
 
 fn my_get_usb_interface(iter: io_iterator_t) {
     loop {

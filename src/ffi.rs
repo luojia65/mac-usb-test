@@ -102,8 +102,28 @@ pub type IOServiceInterestCallback = extern "C" fn(
     message_argument: *const c_void,
 );
 #[allow(non_snake_case)]
+pub fn kIOPublishNotification() -> *const c_char {
+    b"IOServicePublish\0".as_ptr() as *const c_char
+}
+#[allow(non_snake_case)]
+pub fn kIOFirstPublishNotification() -> *const c_char {
+    b"IOServiceFirstPublish\0".as_ptr() as *const c_char
+}
+#[allow(non_snake_case)]
+pub fn kIOMatchedNotification() -> *const c_char {
+    b"IOServiceMatched\0".as_ptr() as *const c_char
+}
+#[allow(non_snake_case)]
 pub fn kIOFirstMatchNotification() -> *const c_char {
     b"IOServiceFirstMatch\0".as_ptr() as *const c_char
+}
+#[allow(non_snake_case)]
+pub fn kIOTerminatedNotification() -> *const c_char {
+    b"IOServiceTerminate\0".as_ptr() as *const c_char
+}
+#[allow(non_snake_case)]
+pub fn kIOWillTerminateNotification() -> *const c_char {
+    b"IOServiceWillTerminate\0".as_ptr() as *const c_char
 }
 
 #[allow(non_snake_case)]
