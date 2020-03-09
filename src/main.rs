@@ -4,12 +4,13 @@ use core::mem::MaybeUninit;
 use mach::kern_return::kern_return_t;
 use core::fmt;
 use std::ffi::CString;
+use std::str::Utf8Error;
 
 #[derive(Debug)]
 pub enum Error {
     MatchServiceFailed,
     IoIteratorInvalid,
-    Utf8Invalid,
+    Utf8(Utf8Error),
     Kernel(kern_return_t)
 }
 
@@ -91,7 +92,7 @@ impl Device {
             return Err(Error::Kernel(kr))
         }
         let c_string = unsafe { CString::from_raw(Box::into_raw(dst) as *mut i8) };
-        c_string.into_string().map_err(|_| Error::Utf8Invalid)
+        c_string.into_string().map_err(|e| Error::Utf8(e.utf8_error()))
     }
 }
 
