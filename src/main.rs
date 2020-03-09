@@ -1,179 +1,111 @@
 mod ffi;
-
-use core::mem::MaybeUninit;
-use core_foundation::uuid::CFUUIDGetUUIDBytes;
-use core_foundation::runloop::*;
-// use core_foundation::dictionary::*;
 use ffi::*;
-use std::ffi::CStr;
-use core::ffi::c_void;
+use core::mem::MaybeUninit;
+use mach::kern_return::kern_return_t;
+use core::fmt;
+use std::ffi::CString;
 
-fn main() {
-    iterate_usb();
+#[derive(Debug)]
+pub enum Error {
+    MatchServiceFailed,
+    IoIteratorInvalid,
+    Utf8Invalid,
+    Kernel(kern_return_t)
 }
 
-fn iterate_usb() {
-    let notify_port = unsafe { IONotificationPortCreate(kIOMasterPortDefault) };
-    dbg!(notify_port);
-    let run_loop_src = unsafe { IONotificationPortGetRunLoopSource(notify_port) };
-    dbg!(run_loop_src);
-    unsafe { CFRunLoopAddSource(
-        CFRunLoopGetCurrent(), 
-        run_loop_src, 
-        kCFRunLoopDefaultMode
-    ) };
+pub type Result<T> = core::result::Result<T, Error>;
 
-    let matching_dict = unsafe { IOServiceMatching(kIOUSBHostDeviceClassName()) };
-    dbg!(matching_dict);
-    if matching_dict == core::ptr::null_mut() {
-        println!("IOServiceMatching returned NULL.");
-        return;
+pub fn devices() -> Result<Devices> {
+    Devices::new_usb_all()
+}
+
+#[derive(Debug)]
+pub struct Devices {
+    iter: io_iterator_t,
+}
+
+impl Devices {
+    fn new_usb_all() -> Result<Self> {
+        let matching_dict = unsafe { IOServiceMatching(kIOUSBHostDeviceClassName()) };
+        if matching_dict == core::ptr::null_mut() {
+            return Err(Error::MatchServiceFailed);
+        }
+        let mut iter: MaybeUninit<io_iterator_t> = MaybeUninit::uninit();
+        let kr = unsafe { IOServiceGetMatchingServices(
+            kIOMasterPortDefault, 
+            matching_dict, 
+            iter.as_mut_ptr()
+        ) };
+        if kr != mach::kern_return::KERN_SUCCESS {
+            return Err(Error::Kernel(kr));
+        }
+        Ok(Devices {
+            iter: unsafe { iter.assume_init() }
+        } )
     }
+}
 
-    let mut added_iter = MaybeUninit::uninit();
-    let kr = unsafe { IOServiceAddMatchingNotification(
-        notify_port,
-        kIOMatchedNotification(),
-        matching_dict,
-        my_notify_callback,
-        core::ptr::null(),
-        added_iter.as_mut_ptr(),
-    ) };
-    let added_iter = unsafe { added_iter.assume_init() };
-    if kr != mach::kern_return::KERN_SUCCESS {
-        println!("IOServiceAddMatchingNotification not success!");
-        return;
-    }
+impl Drop for Devices {
+    fn drop(&mut self) {
+        unsafe { IOObjectRelease(self.iter) };
+    } 
+}
 
-    loop {
-        let service = unsafe { IOIteratorNext(added_iter) };
+impl Iterator for Devices {
+    type Item = Result<Device>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let is_valid = unsafe { IOIteratorIsValid(self.iter) };
+        if !is_valid {
+            unsafe { IOIteratorReset(self.iter) };
+            return Some(Err(Error::IoIteratorInvalid))
+        }
+        let service = unsafe { IOIteratorNext(self.iter) };
         if service == 0 {
-            break
+            return None;
         }
-    }
-
-    println!("Please plug any USB device!");
-    unsafe { CFRunLoopRun() };
-
-    unsafe { IOObjectRelease(added_iter) };
-}
-
-extern "C" fn my_notify_callback(
-    ref_con: *const c_void, 
-    iterator: io_iterator_t
-) {
-    println!("New device detected! Ref: {:p} Iter: 0x{:08x}", ref_con, iterator);
-    my_get_usb_interface(iterator);
-    // do not release iterator here
-}
-
-
-fn my_get_usb_interface(iter: io_iterator_t) {
-    loop {
-        let service = unsafe { IOIteratorNext(iter) };
-        if service == 0 {
-            break;
-        }
-        dbg!(service);
-
-        // 
-        let mut name = Box::new([0i8; 128]);
-        let kr = unsafe { IORegistryEntryGetName(service, name.as_mut_ptr()) };
-        if kr != mach::kern_return::KERN_SUCCESS {
-            println!("IORegistryEntryGetName not success!");
-            continue;
-        }
-        let name = unsafe { CStr::from_ptr(name.as_ptr()) };
-        dbg!(name.to_str().unwrap());
-
-        // Create an intermediate plug-in
-        let mut plugin_interface = MaybeUninit::uninit();
-        let mut score = MaybeUninit::uninit();
-        let kr = unsafe {
-            IOCreatePlugInInterfaceForService(
-                service,
-                kIOUSBDeviceUserClientTypeID(),
-                kIOCFPlugInInterfaceID(),
-                plugin_interface.as_mut_ptr(),
-                score.as_mut_ptr(),
-            )
-        };
-        // Don't need the device object after intermediate plug-in is created
-        unsafe { IOObjectRelease(service) };
-        if kr != mach::kern_return::KERN_SUCCESS {
-            println!("IOCreatePlugInInterfaceForService not success! 0x{:08X}", kr);
-            unsafe { IOObjectRelease(service) };
-            continue;
-        }
-        dbg!(unsafe { score.assume_init() });
-
-        // Now create the device interface
-        let plugin_interface = unsafe { plugin_interface.assume_init() };
-        let mut device_interface = MaybeUninit::<*mut *mut IOUSBDeviceInterface942>::uninit();
-        let kr = unsafe {
-            ((**plugin_interface).QueryInterface)(
-                plugin_interface,
-                CFUUIDGetUUIDBytes(kIOUSBDeviceInterfaceID942()),
-                device_interface.as_mut_ptr().cast(),
-            )
-        };
-        //Don't need the device object after intermediate plug-in is created
-        unsafe { IODestroyPlugInInterface(plugin_interface) };
-        if kr != mach::kern_return::KERN_SUCCESS {
-            println!("QueryInterface not success! 0x{:08X}", kr);
-            continue;
-        }
-        let device_interface = unsafe { device_interface.assume_init() };
-        let mut location_id = MaybeUninit::uninit();
-        let kr = unsafe {
-            ((**device_interface).GetLocationID)(
-                device_interface,
-                location_id.as_mut_ptr()
-            )
-        };
-        if kr != mach::kern_return::KERN_SUCCESS {
-            println!("GetLocationID not success! 0x{:08X}", kr);
-            continue;
-        }
-        let location_id = unsafe { location_id.assume_init() };
-        dbg!(location_id);
-
-        let mut usb_device_address = MaybeUninit::uninit();
-        let kr = unsafe {
-            ((**device_interface).GetDeviceAddress)(device_interface, usb_device_address.as_mut_ptr())
-        };
-        if kr != mach::kern_return::KERN_SUCCESS {
-            println!("GetDeviceAddress not success! 0x{:08X}", kr);
-            continue;
-        }
-        let usb_device_address = unsafe { usb_device_address.assume_init() };
-        dbg!(usb_device_address);
-
-        process_usb_device(device_interface);
+        Some(Ok(Device::from_service(service)))
     }
 }
 
-fn process_usb_device(device_interface: *mut *mut IOUSBDeviceInterface942) {
-    let kr = unsafe { ((**device_interface).USBDeviceOpen)(device_interface) };
-    if kr != mach::kern_return::KERN_SUCCESS {
-        // no USBDeviceClose here; will return 0x2c5 error for device not open
-        let kr3 = unsafe { ((**device_interface).Release)(device_interface) };
-        println!("USBDeviceOpen not success! 0x{:08X} => 0x{:08X}", kr, kr3);
-        return;
+pub struct Device {
+    service: io_service_t,
+}
+
+impl Drop for Device {
+    fn drop(&mut self) {
+        unsafe { IOObjectRelease(self.service) };
+    }
+}
+
+impl Device {
+    fn from_service(service: io_service_t) -> Self {
+        Self { service }
     }
 
-    let mut num_config = MaybeUninit::uninit();
-    let kr = unsafe { ((**device_interface).GetNumberOfConfigurations)(
-        device_interface,
-        num_config.as_mut_ptr()
-    ) };
-    if kr != mach::kern_return::KERN_SUCCESS {
-        println!("GetNumberOfConfigurations not success! 0x{:08X}", kr);
-        return;
+    fn read_name_string(&self) -> Result<CString> {
+        let mut dst = Box::new([0i8; 128]);
+        let dst_ptr = dst.as_mut_ptr();
+        let kr = unsafe { IORegistryEntryGetName(self.service, dst_ptr) };
+        if kr != mach::kern_return::KERN_SUCCESS {
+            return Err(Error::Kernel(kr))
+        }
+        Ok(unsafe { CString::from_raw(Box::into_raw(dst) as *mut i8) })
     }
-    let num_config = unsafe { num_config.assume_init() };
-    dbg!(num_config);
+}
 
-    unsafe { ((**device_interface).USBDeviceClose)(device_interface) };
-    unsafe { ((**device_interface).Release)(device_interface) };
+impl fmt::Debug for Device {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self.read_name_string() {
+            Ok(s) => write!(f, "{:?}", s),
+            Err(e) => write!(f, "{:?}", e),
+        }
+    }
+}
+
+fn main() -> Result<()> {
+    for device in dbg!(devices()?) {
+        dbg!(&device?);
+    }
+    Ok(())
 }

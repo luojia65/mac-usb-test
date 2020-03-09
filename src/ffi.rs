@@ -14,10 +14,12 @@ extern "C" {
     pub fn IOServiceMatching(name: *const c_char) -> CFMutableDictionaryRef;
     pub fn IOServiceGetMatchingServices(
         master_port: mach_port_t,
-        matching: CFDictionaryRef,
+        matching: CFDictionaryRef, // CF_RELEASES_ARGUMENT
         existing: *mut io_iterator_t,
     ) -> kern_return_t;
     pub fn IOIteratorNext(iterator: io_iterator_t) -> io_object_t;
+    pub fn IOIteratorReset(iterator: io_iterator_t);
+    pub fn IOIteratorIsValid(iterator: io_iterator_t) -> bool;
     pub fn IOObjectRelease(object: io_object_t) -> kern_return_t;
     pub fn IORegistryEntryGetName(
         entry: io_registry_entry_t,
