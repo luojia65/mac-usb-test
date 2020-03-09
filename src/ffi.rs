@@ -101,6 +101,7 @@ pub type IOServiceInterestCallback = extern "C" fn(
     message_type: u32,
     message_argument: *const c_void,
 );
+
 #[allow(non_snake_case)]
 pub fn kIOPublishNotification() -> *const c_char {
     b"IOServicePublish\0".as_ptr() as *const c_char
@@ -124,6 +125,23 @@ pub fn kIOTerminatedNotification() -> *const c_char {
 #[allow(non_snake_case)]
 pub fn kIOWillTerminateNotification() -> *const c_char {
     b"IOServiceWillTerminate\0".as_ptr() as *const c_char
+}
+
+#[allow(non_snake_case)]
+pub fn kIOGeneralInterest() -> *const c_char {
+    b"IOGeneralInterest\0".as_ptr() as *const c_char
+}
+#[allow(non_snake_case)]
+pub fn kIOBusyInterest() -> *const c_char {
+    b"IOBusyInterest\0".as_ptr() as *const c_char
+}
+#[allow(non_snake_case)]
+pub fn kIOAppPowerStateInterest() -> *const c_char {
+    b"IOAppPowerStateInterest\0".as_ptr() as *const c_char
+}
+#[allow(non_snake_case)]
+pub fn kIOPriorityPowerStateInterest() -> *const c_char {
+    b"IOPriorityPowerStateInterest\0".as_ptr() as *const c_char
 }
 
 #[allow(non_snake_case)]

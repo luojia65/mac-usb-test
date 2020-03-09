@@ -61,8 +61,18 @@ extern "C" fn my_notify_callback(
     // do not release iterator here
 }
 
+extern "C" fn my_interest_callback(
+    ref_con: *const c_void, 
+    service: io_service_t,
+    message_type: u32,
+    message_argument: *const c_void
+) {
+    println!("Device interest! Ref: {:p}, Srv: {}, Type: {}, arg: {:p}",
+        ref_con, service, message_type, message_argument);
+}
 
 fn my_get_usb_interface(iter: io_iterator_t) {
+    let notify_port = unsafe { IONotificationPortCreate(kIOMasterPortDefault) };
     loop {
         let service = unsafe { IOIteratorNext(iter) };
         if service == 0 {
@@ -79,6 +89,20 @@ fn my_get_usb_interface(iter: io_iterator_t) {
         }
         let name = unsafe { CStr::from_ptr(name.as_ptr()) };
         dbg!(name.to_str().unwrap());
+
+        let mut notification = MaybeUninit::uninit();
+        let kr = unsafe { IOServiceAddInterestNotification(
+            notify_port,
+            service,
+            kIOGeneralInterest(),
+            my_interest_callback,
+            core::ptr::null(),
+            notification.as_mut_ptr()
+        ) };
+        if kr != mach::kern_return::KERN_SUCCESS {
+            println!("IOServiceAddInterestNotification not success!");
+            continue;
+        }
 
         // Create an intermediate plug-in
         let mut plugin_interface = MaybeUninit::uninit();

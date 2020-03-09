@@ -45,8 +45,14 @@ fn iterate_usb() {
         return;
     }
 
-    my_get_usb_interface(added_iter);
+    loop {
+        let service = unsafe { IOIteratorNext(added_iter) };
+        if service == 0 {
+            break
+        }
+    }
 
+    println!("Please plug any USB device!");
     unsafe { CFRunLoopRun() };
 
     unsafe { IOObjectRelease(added_iter) };
