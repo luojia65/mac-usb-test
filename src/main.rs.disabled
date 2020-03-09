@@ -1,0 +1,30 @@
+
+    let matching_dict = unsafe { IOServiceMatching(kIOUSBHostDeviceClassName()) };
+    
+    let notify_port = unsafe { IONotificationPortCreate(kIOMasterPortDefault) };
+    dbg!(notify_port);
+    let run_loop_src = unsafe { IONotificationPortGetRunLoopSource(notify_port) };
+    dbg!(run_loop_src);
+    let run_loop = unsafe { CFRunLoopGetCurrent() };
+    dbg!(run_loop);
+    unsafe { CFRunLoopAddSource(run_loop, run_loop_src, kCFRunLoopDefaultMode) };
+
+    let mut added_iter = MaybeUninit::uninit();
+    let kr = unsafe { IOServiceAddMatchingNotification(
+        notify_port,
+        kIOFirstMatchNotification(),
+        matching_dict,
+        my_notify_callback,
+        core::ptr::null(),
+        added_iter.as_mut_ptr(),
+    ) };
+    if kr != mach::kern_return::KERN_SUCCESS {
+        println!("IOServiceAddMatchingNotification not success!");
+        return;
+    }
+    std::thread::park();
+
+    
+extern "C" fn my_notify_callback(_ref_con: *const c_void, iterator: io_iterator_t) {
+    println!("Notify! {}", iterator);
+}

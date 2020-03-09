@@ -33,6 +33,24 @@ extern "C" {
     pub fn IODestroyPlugInInterface(
         interface: *mut *mut IOCFPlugInInterface,
     ) -> kern_return_t;
+    pub fn IONotificationPortCreate(master_port: mach_port_t) -> IONotificationPortRef;
+    pub fn IONotificationPortGetRunLoopSource(notify: IONotificationPortRef) -> CFRunLoopSourceRef;
+    pub fn IOServiceAddMatchingNotification(
+        notify_port: IONotificationPortRef,
+        notification_type: *const c_char, // io_name_t
+        matching: CFDictionaryRef,
+        callback: IOServiceMatchingCallback,
+        ref_con: *const c_void,
+        notification: *mut io_iterator_t,
+    ) -> kern_return_t;
+    pub fn IOServiceAddInterestNotification(
+        notify_port: IONotificationPortRef,
+        service: io_service_t,
+        interest_type: *const c_char, // const io_name_t
+        callback: IOServiceInterestCallback,
+        ref_con: *const c_void,
+        notification: *mut io_object_t,
+    ) -> kern_return_t;
     pub fn CFUUIDGetConstantUUIDWithBytes(
         alloc: CFAllocatorRef,
         byte0: UInt8,
@@ -64,6 +82,29 @@ pub type io_registry_entry_t = io_object_t;
 pub type io_service_t = io_object_t;
 #[allow(non_camel_case_types)]
 pub type io_name_t = *mut c_char; // [c_char; 128]
+
+#[repr(C)]
+pub struct IONotificationPort {
+    private: c_void,
+}
+#[allow(non_camel_case_types)]
+pub type IONotificationPortRef = *mut IONotificationPort;
+#[allow(non_camel_case_types)]
+pub type IOServiceMatchingCallback = extern "C" fn(
+    ref_con: *const c_void, 
+    iterator: io_iterator_t
+);
+#[allow(non_camel_case_types)]
+pub type IOServiceInterestCallback = extern "C" fn(
+    ref_con: *const c_void, 
+    service: io_service_t,
+    message_type: u32,
+    message_argument: *const c_void,
+);
+#[allow(non_snake_case)]
+pub fn kIOFirstMatchNotification() -> *const c_char {
+    b"IOServiceFirstMatch\0".as_ptr() as *const c_char
+}
 
 #[allow(non_snake_case)]
 pub fn kIOUSBDeviceClassName() -> *const c_char {

@@ -4,8 +4,34 @@ use core::mem::MaybeUninit;
 use core_foundation::uuid::CFUUIDGetUUIDBytes;
 use ffi::*;
 use std::ffi::CStr;
+use core::ffi::c_void;
 
 fn main() {
+    iterate_usb();
+    
+    // let matching_dict = unsafe { IOServiceMatching(kIOUSBHostDeviceClassName()) };
+    
+    // let notify_port = unsafe { IONotificationPortCreate(kIOMasterPortDefault) };
+    // dbg!(notify_port);
+    // let run_loop_src = unsafe { IONotificationPortGetRunLoopSource(notify_port) };
+    // dbg!(run_loop_src);
+
+    // let kr = unsafe { IOServiceAddInterestNotification(
+    //     notify_port
+    // ) };
+}
+
+
+fn my_callback(
+    ref_con: *const c_void, 
+    service: io_service_t,
+    message_type: u32,
+    message_argument: *const c_void
+) {
+    println!("todo! {:p} 0x{:08x} {} {:p}", ref_con, service, message_type, message_argument);
+}
+
+fn iterate_usb() {
     let matching_dict = unsafe { IOServiceMatching(kIOUSBHostDeviceClassName()) };
     dbg!(matching_dict);
     if matching_dict == core::ptr::null_mut() {
