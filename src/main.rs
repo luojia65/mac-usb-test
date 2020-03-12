@@ -28,6 +28,10 @@ impl MyDevice {
     fn new() -> Box<MyDevice> {
         Box::new(unsafe { MaybeUninit::uninit().assume_init() })
     }
+
+    fn debug_name(&self) -> &CStr {
+        &unsafe { CStr::from_ptr(self.device_name.as_ptr()) }
+    }
 }
 
 impl fmt::Debug for MyDevice {
@@ -35,7 +39,7 @@ impl fmt::Debug for MyDevice {
         f.debug_struct("MyDevice")
             .field("notification", &self.notification)
             .field("device_interface", &self.device_interface)
-            .field("device_name", &unsafe { CStr::from_ptr(self.device_name.as_ptr()) })
+            .field("device_name", &self.debug_name())
             .field("location_id", &self.location_id)
             .finish()  
     }
@@ -49,8 +53,7 @@ extern "C" fn device_notify(
 ) {
     let _ = message_argument;
     let device = unsafe { Box::from_raw(ref_con as *const _ as *mut MyDevice) };
-    println!("Device: {:?}", device);
-    println!("Received message: 0x{:08x}", message_type);
+    println!("Device {:?} received message 0x{:08x}", device.debug_name(), message_type);
     if message_type == kIOMessageServiceIsTerminated {
         println!("Device 0x{:08x} removed!", service);
         
@@ -72,7 +75,6 @@ extern "C" fn device_added (
     iterator: io_iterator_t,
 ) {
     let _ = ref_con;
-    let notify_port: IONotificationPortRef = ref_con as IONotificationPortRef;
     loop {
         let usb_device = unsafe { IOIteratorNext(iterator) };
         if usb_device == 0 {
