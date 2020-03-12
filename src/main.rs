@@ -5,8 +5,6 @@ use core::mem::MaybeUninit;
 use core::mem::transmute;
 use core::ffi::c_void;
 use core::fmt;
-use core::sync::atomic::AtomicUsize;
-use core::sync::atomic::Ordering;
 use std::ffi::CStr;
 use mach::kern_return;
 use mach::mach_port::*;
@@ -14,8 +12,6 @@ use mach::traps::mach_task_self;
 use mach::port::mach_port_t;
 use core_foundation::uuid::CFUUIDGetUUIDBytes;
 use core_foundation::runloop::*;
-
-static GLOBAL_NOTIFY_PORT: AtomicUsize = AtomicUsize::new(0);
 
 struct MyDevice {
     notification: io_object_t,
@@ -74,7 +70,7 @@ extern "C" fn device_added (
     ref_con: *const c_void,
     iterator: io_iterator_t,
 ) {
-    let _ = ref_con;
+    let notify_port = ref_con as *mut _;
     loop {
         let usb_device = unsafe { IOIteratorNext(iterator) };
         if usb_device == 0 {
@@ -141,7 +137,7 @@ extern "C" fn device_added (
 
         let notification = &device.notification as *const _ as  *mut _;
         let kr = unsafe { IOServiceAddInterestNotification(
-            GLOBAL_NOTIFY_PORT.load(Ordering::SeqCst) as *mut _,
+            notify_port,
             usb_device,
             kIOGeneralInterest(),
             device_notify,
@@ -183,7 +179,7 @@ fn main() {
         kIOFirstMatchNotification(),
         matching_dict,
         device_added,
-        core::ptr::null(),
+        notify_port as *mut _, // refCon
         added_iter.as_mut_ptr(),
     ) };
     let added_iter: io_iterator_t = unsafe { added_iter.assume_init() };
@@ -191,9 +187,8 @@ fn main() {
         println!("Add matching notification failed! {:08x}", kr);
         return;
     }
-    GLOBAL_NOTIFY_PORT.store(notify_port as usize, Ordering::SeqCst);
 
-    device_added(core::ptr::null(), added_iter);
+    device_added(notify_port as *mut _, added_iter);
 
     unsafe { mach_port_deallocate(mach_task_self(), master_port) };
     
