@@ -11,6 +11,7 @@ use mach::{kern_return::kern_return_t, port::mach_port_t};
 
 extern "C" {
     pub static kIOMasterPortDefault: mach_port_t;
+    pub fn IOMasterPort(bootstrap_port: mach_port_t, master_port: *mut mach_port_t) -> kern_return_t;
     pub fn IOServiceMatching(name: *const c_char) -> CFMutableDictionaryRef;
     pub fn IOServiceGetMatchingServices(
         master_port: mach_port_t,
@@ -73,6 +74,8 @@ extern "C" {
         byte15: UInt8,
     ) -> CFUUIDRef;
 }
+
+pub static MACH_PORT_NULL: mach_port_t = 0;
 
 #[allow(non_camel_case_types)]
 pub type io_object_t = mach_port_t;
@@ -191,6 +194,12 @@ pub fn kIOUSBDeviceInterfaceID942() -> CFUUIDRef {
         0xA1, 0xF5, 0x2C, 0x8D, 0xC4, 0x3E, 0x8A, 0x98
     ) }
 } 
+const fn iokit_common_msg(msg: u32) -> u32 {
+    // (sys_iokit|sub_iokit_common|message)
+    (0x38 << 26) | (0 << 14) | msg
+}
+#[allow(non_upper_case_globals)]
+pub const kIOMessageServiceIsTerminated: u32 = iokit_common_msg(0x010);
 
 pub type UInt8 = u8;
 pub type UInt16 = u16;
