@@ -26,6 +26,11 @@ extern "C" {
         entry: io_registry_entry_t,
         name: io_name_t,
     ) -> kern_return_t;
+    pub fn IORegistryEntryGetPath(
+        entry: io_registry_entry_t,
+        plane: *const c_char, // io_name_t
+        path: *mut c_char, // io_string_t
+    ) -> kern_return_t;
     pub fn IOCreatePlugInInterfaceForService(
         service: io_service_t,
         plugin_type: CFUUIDRef,
@@ -87,6 +92,8 @@ pub type io_registry_entry_t = io_object_t;
 pub type io_service_t = io_object_t;
 #[allow(non_camel_case_types)]
 pub type io_name_t = *mut c_char; // [c_char; 128]
+#[allow(non_camel_case_types)]
+pub type io_string_t = *mut c_char; // [c_char; 512]
 
 #[repr(C)]
 pub struct IONotificationPort {
