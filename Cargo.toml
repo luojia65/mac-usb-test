@@ -11,3 +11,5 @@ build = "build.rs"
 libc = "*"
 core-foundation = "*"
 mach = "*"
+futures = "0.3"
+async-std = { version = "1", features = ["attributes"] }
