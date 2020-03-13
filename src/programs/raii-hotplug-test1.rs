@@ -10,6 +10,8 @@ use core::task::{Poll, Context, Waker};
 use std::ffi::CStr;
 use std::io;
 use mach::kern_return;
+use mach::mach_port::*;
+use mach::traps::mach_task_self;
 use mach::port::mach_port_t;
 use core_foundation::uuid::CFUUIDGetUUIDBytes;
 use core_foundation::runloop::*;
@@ -31,10 +33,12 @@ pub fn devices() -> Result<Box<Devices>> {
 
 pub struct Devices {
     notify_port: IONotificationPortRef,
-    iter: io_iterator_t,
     last_device: Option<Box<MyDevice>>,
     waker: Option<Waker>,
 }
+
+unsafe impl Send for Devices {}
+unsafe impl Sync for Devices {}
 
 impl Devices {
     fn new_usb() -> Result<Box<Self>> {
@@ -58,7 +62,6 @@ impl Devices {
         
         let ans: Box<Devices> = Box::new(Devices {
             notify_port,
-            iter: 0,
             last_device: None,
             waker: None,
         });
@@ -79,11 +82,17 @@ impl Devices {
 
         device_added(ans_ptr as *const _, added_iter);
 
-        unsafe { &mut *ans_ptr }.iter = added_iter;
         unsafe { &mut *ans_ptr }.last_device = None;
+
+        unsafe { mach_port_deallocate(mach_task_self(), master_port) };
         
         let ans = unsafe { Box::from_raw(ans_ptr) };
         Ok(ans)
+    }
+
+    pub fn run() -> ! {
+        unsafe { CFRunLoopRun() };
+        loop {} // never reach this point
     }
 }
 
@@ -213,12 +222,12 @@ extern "C" fn device_added (
         if kr != kern_return::KERN_SUCCESS {
             println!("IOServiceAddInterestNotification returned 0x{:08x}", kr);
         }
+        unsafe { IOObjectRelease(usb_device) };
 
         devices.last_device = Some(unsafe { Box::from_raw(device_ptr )});
         if let Some(waker) = devices.waker.clone() {
             waker.wake();
         }
-        unsafe { IOObjectRelease(usb_device) };
     }
 }
 
@@ -250,8 +259,9 @@ extern "C" fn device_notify(
 #[async_std::main]
 async fn main() -> Result<()> {
     let mut devices = devices()?;
-    while let Some(device) = devices.next().await { 
-        println!("{:?}", device);
-    }
-    Ok(())
+    async_std::task::spawn(async move { 
+        while let Some(device) = devices.next().await { 
+            println!("{:?}", device);
+        } });
+    Devices::run()
 }
